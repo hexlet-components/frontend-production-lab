@@ -1,0 +1,11 @@
+:root { font-family: system-ui, sans-serif; color: #173744; background: #f4f7f8; }
+body { margin: 0; }
+main { max-width: 880px; margin: 40px auto; padding: 28px; background: white; border-radius: 16px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+nav { display: flex; gap: 18px; padding: 16px 0; border-block: 1px solid #d8e3e8; }
+a { color: #126378; }
+.card { display: flex; gap: 28px; margin-block: 28px; align-items: center; }
+.card img { width: 200px; }
+.meta { color: #45616d; font-size: 0.9rem; }
+button { padding: 10px 16px; border: 1px solid #aac4ce; border-radius: 6px; background: #fff; cursor: pointer; }
+.error { color: #a11; }

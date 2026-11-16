@@ -4,6 +4,9 @@ hk = "2"
 jactionlint = "latest"
 lychee = "latest"
 node = "26"
+"npm:oxfmt" = "0.79.0"
+"npm:oxlint" = "1.94.0"
+osv-scanner = "latest"
 "npm:@commitlint/cli" = "latest"
 "npm:@commitlint/config-conventional" = "latest"
 pkl = "latest"
@@ -15,11 +18,11 @@ typos = "latest"
 # и заполняет test.
 [tasks.setup]
 description = "Поставить зависимости и git-хуки"
-run = ["hk install"]
+run = ["npm ci", "hk install"]
 
 [tasks.test]
-description = "Тесты стека"
-run = 'echo "test не настроен, см. AGENTS.md" >&2; exit 1'
+description = "Тесты стенда: собирает A и B и проверяет публикацию, кеш, CORS и откат"
+run = "npm test"
 
 [tasks.check]
 description = "Все проверки, тот же набор, что гоняет CI"

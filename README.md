@@ -1,38 +1,104 @@
 <div align="center">
 
-<a href="https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=component-template">
+<a href="https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Hexlet/brand-assets/master/images/svg/hexlet_wordmark_white_rus.svg">
         <img src="https://raw.githubusercontent.com/Hexlet/brand-assets/master/images/svg/hexlet_wordmark_primary_rus.svg" alt="Хекслет" height="64">
     </picture>
 </a>
 
-# component-template
+# Стенд курса Хекслета «Фронтенд в продакшене»
 
-[![CI](https://github.com/hexlet-components/component-template/actions/workflows/main.yml/badge.svg)](https://github.com/hexlet-components/component-template/actions/workflows/main.yml)
-[![Check](https://github.com/hexlet-components/component-template/actions/workflows/check.yml/badge.svg)](https://github.com/hexlet-components/component-template/actions/workflows/check.yml)
+[![CI](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/main.yml/badge.svg)](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/main.yml)
+[![Check](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/check.yml/badge.svg)](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/check.yml)
 
 </div>
 
-Компонент создаёт и поддерживает команда [Хекслета](https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=component-template), образовательного проекта.
+Компонент создаёт и поддерживает команда [Хекслета](https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab), образовательного проекта.
 
-> Шаблон репозиториев hexlet-components. Новый репозиторий создаётся командой ниже, а после клона его настраивает раздел «Первая настройка» в [AGENTS.md](AGENTS.md). Настройка заменяет `component-template` в этом файле именем репозитория, заполняет разделы и удаляет эту цитату.
->
-> ```sh
-> gh repo create hexlet-components/<имя> --public --template hexlet-components/component-template --description "<что это и для какого курса>"
-> ```
+Учебный стенд курса [«Фронтенд в продакшене»](https://ru.hexlet.io/courses/frontend-production?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab). На нём сняты примеры уроков, от вывода сборки и ответов сервера до выпуска новой версии и отката. Стенд нужен, чтобы повторить эти примеры у себя и сломать то же, что ломается в уроках.
 
-Что это и для какого курса, проекта или программы Хекслета. Одним-двумя абзацами: кто пользуется компонентом (студент в уроке, проверка практики, стенд проекта) и что сломается у них, если его поменять.
+Приложение содержит каталог, карточку товара `/products/42`, ленивый раздел `/reports` и кнопку учебной ошибки. Источники находятся в _src/_, статический файл _public/robots.txt_ копируется в результат без хеша.
 
 ## Запуск
+
+Нужен Node.js 22.12 или новее. Склонируйте репозиторий или создайте свою копию кнопкой **Use this template** и выполняйте команды из его каталога.
+
+```bash
+npm ci
+npm run lab
+```
+
+Стенд остаётся работать в отдельном терминале. Он предоставляет раздачу опубликованного приложения на `http://127.0.0.1:8080`, готовый API на `http://127.0.0.1:8081` и модель общего кеша на `http://127.0.0.1:8082`. Локальный кеш показывает хранение ответов; географической доставки у него нет.
+
+Во втором терминале приложение можно открыть через dev-сервер.
+
+```bash
+npm run dev
+```
+
+Dev-сервер работает на `http://127.0.0.1:5173`. Команда `npm run preview` после сборки открывает результат на `http://127.0.0.1:4173`. Обоим нужен работающий API стенда; предварительная публикация не требуется. Vite предоставляет публичный _app-config.json_ из этого каталога отдельно от файлов сборки. Правка этого JSON видна после перезагрузки страницы без пересборки.
+
+## Сборка и публикация
+
+```bash
+RELEASE_ID=A npm run build
+npm run manifest
+npm run publish -- A
+npm run activate -- A
+```
+
+Сборка содержит _release.json_ с версией и _assets/_ с хешированными ресурсами. Команда публикации сохраняет байты _dist/_ в _.lab/releases/A/_, контрольные суммы в _.lab/manifests/A.json_ и копирует ресурсы в _.lab/shared/assets/_. Существующий релиз перезаписать нельзя. Активация сверяет сохранённые файлы с контрольными суммами и выбирает релиз; новой сборки она не делает.
+
+Публикация копирует отдельный _app-config.json_ в _.lab/configs/A.json_. Этот конфиг не находится в _public/_ и не входит в _dist/_. Менять параметры опубликованного окружения можно независимо от сборки.
+
+```bash
+npm run configure -- environment staging
+npm run configure -- apiBase http://127.0.0.1:8081/api
+```
+
+После перезагрузки браузер получает новый конфиг. Прямой запрос к API на другом порту позволяет наблюдать CORS. Значение `/api` возвращает запросы на адрес самого приложения, где сервер стенда пересылает их в API.
+
+## Управляемые поломки
+
+Настройки сохраняются в _.lab/settings.json_. По умолчанию fallback и CORS включены, длительное кеширование HTML выключено.
+
+```bash
+npm run configure -- fallback false
+npm run configure -- cors false
+npm run configure -- cacheHtml true
+npm run invalidate
+```
+
+Fallback применяется к запросу HTML по маршруту без расширения. Отсутствующие ресурсы возвращают 404. Хешированные ресурсы получают длительную политику хранения. HTML и runtime-конфиг по умолчанию требуют повторной проверки. `cacheHtml true` намеренно делает HTML свежим в течение часа; через адрес общего кеша можно увидеть старую версию. Учебный заголовок `X-Lab-Cache` принимает значения `MISS`, `HIT` и `BYPASS`. Инвалидация очищает только модель общего кеша, отдельный кеш браузера она не меняет.
+
+Выпуск B сохраняет файлы A для открытых вкладок. Чанк отчёта A можно удалить командой ниже, подставив фактическое имя из манифеста A.
+
+```bash
+npm run remove-asset -- assets/reports-ИМЯ.js
+```
+
+Команда удаляет файл только из общей раздачи. Копия в _.lab/releases/A/assets/_ остаётся для исследования и восстановления. Для отката достаточно `npm run activate -- A`, если старые ресурсы доступны. После удаления ресурса его нужно вернуть из сохранённого комплекта. Инвалидация не восстанавливает отсутствующие файлы.
+
+## Карты и проверки
+
+```bash
+RELEASE_ID=C SOURCEMAP=true npm run build
+npm test
+```
+
+Карты создаются рядом с JavaScript. Для публичного комплекта без карт их нужно отделить до публикации. Интеграции с живым Sentry в этом примере нет.
+
+Проверка собирает реальные версии A и B во временном каталоге, проверяет неизменность публикации, fallback, 404 ресурса, CORS, попадание в общий кеш и его сброс, сохранение старого чанка, runtime-конфигурацию, откат и отказ активации изменённого комплекта. Тесты используют свободные локальные порты и удаляют только свой временный каталог.
+
+## Проверки
+
+Для поддержки стенда.
 
 ```sh
 mise run setup
 mise run test
+mise run check
 ```
 
-`make <задача>` вызывает ту же задачу mise.
-
-## Проверки
-
-`mise run check` гоняет тот же набор, что CI: разметку, опечатки, ссылки, workflows и проверки стека.
+`mise run check` гоняет тот же набор, что CI: разметку, опечатки, ссылки, workflows, oxlint и oxfmt, уязвимости зависимостей. `make <задача>` вызывает ту же задачу mise.

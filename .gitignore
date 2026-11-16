@@ -1,2 +1,6 @@
-
 .lycheecache
+node_modules/
+dist/
+.lab/
+.env.local
+.env.sentry-build-plugin

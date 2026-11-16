@@ -6,12 +6,25 @@ import "package://github.com/jdx/hk/releases/download/v2.8.1/hk@2.8.1#/Builtins.
 // Быстрые проверки идут на каждый коммит. Сеть и долгие шаги вынесены в all:
 // их гоняют check, pre-push и CI.
 local fast = new Mapping<String, Step> {
+  ["oxfmt"] {
+    glob = List("**/*.js", "**/*.jsx", "**/*.mjs")
+    check = "oxfmt --check {{files}}"
+    fix = "oxfmt {{files}}"
+  }
+  ["oxlint"] {
+    glob = List("**/*.js", "**/*.jsx", "**/*.mjs")
+    check = "oxlint --deny-warnings {{files}}"
+  }
   ["rumdl"] = Builtins.rumdl
   ["typos"] = Builtins.typos
   ["jactionlint"] = Builtins.jactionlint
 }
 
 local all = (fast) {
+  ["osv-scanner"] {
+    glob = List("package-lock.json")
+    check = "osv-scanner scan --lockfile package-lock.json"
+  }
   ["lychee"] {
     glob = List("**/*.md")
     check = "lychee --config lychee.toml --no-progress {{files}}"
