@@ -2,7 +2,7 @@
   "name": "frontend-production-catalog",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.12" },
+  "engines": { "node": ">=26" },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
