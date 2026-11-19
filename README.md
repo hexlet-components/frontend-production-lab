@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab">
+<a href="https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=warehouse-stock">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Hexlet/brand-assets/master/images/svg/hexlet_wordmark_white_rus.svg">
         <img src="https://raw.githubusercontent.com/Hexlet/brand-assets/master/images/svg/hexlet_wordmark_primary_rus.svg" alt="Хекслет" height="64">
@@ -9,14 +9,14 @@
 
 # «Остатки», учебное приложение курса Хекслета «Фронтенд в продакшене»
 
-[![CI](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/main.yml/badge.svg)](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/main.yml)
-[![Check](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/check.yml/badge.svg)](https://github.com/hexlet-components/frontend-production-lab/actions/workflows/check.yml)
+[![CI](https://github.com/hexlet-components/warehouse-stock/actions/workflows/main.yml/badge.svg)](https://github.com/hexlet-components/warehouse-stock/actions/workflows/main.yml)
+[![Check](https://github.com/hexlet-components/warehouse-stock/actions/workflows/check.yml/badge.svg)](https://github.com/hexlet-components/warehouse-stock/actions/workflows/check.yml)
 
 </div>
 
-Компонент создаёт и поддерживает команда [Хекслета](https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab), образовательного проекта.
+Компонент создаёт и поддерживает команда [Хекслета](https://hexlet.io/?utm_source=github&utm_medium=link&utm_campaign=warehouse-stock), образовательного проекта.
 
-«Остатки» это учебное приложение курса «Фронтенд в продакшене» из [каталога Хекслета](https://ru.hexlet.io/courses?utm_source=github&utm_medium=link&utm_campaign=frontend-production-lab). На нём сняты примеры уроков, от вывода сборки и ответов сервера до выпуска новой версии и отката. Приложение нужно, чтобы повторить эти примеры у себя и сломать то же, что ломается в уроках.
+«Остатки» это учебное приложение курса «Фронтенд в продакшене» из [каталога Хекслета](https://ru.hexlet.io/courses?utm_source=github&utm_medium=link&utm_campaign=warehouse-stock). На нём сняты примеры уроков, от вывода сборки и ответов сервера до выпуска новой версии и отката. Приложение нужно, чтобы повторить эти примеры у себя и сломать то же, что ломается в уроках.
 
 Приложение ведёт учёт товаров на складе магазина. Сотрудники видят список товаров с остатками, а на карточке товара, например `/products/42`, принимают и выдают товар в выбранном количестве. Менеджер смотрит движение товаров в разделе `/reports`, его код загружается отдельным чанком. Ролей нет, все разделы открыты всем. Ещё в приложении есть кнопка учебной ошибки. API хранит остатки и движения в памяти, поэтому после перезапуска они возвращаются к исходным. Источники находятся в _src/_, статический файл _public/robots.txt_ копируется в результат без хеша.
 
