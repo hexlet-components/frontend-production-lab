@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { activate, configure, createLab, manifest, publish, removeAsset } from "./lab-core.mjs";
+import {
+  activate,
+  configure,
+  createLab,
+  manifest,
+  publish,
+  removeAsset,
+  reset,
+} from "./lab-core.mjs";
 
 test("выпуск, общий кеш, ошибки ресурсов и откат", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "frontend-production-"));
@@ -111,6 +119,28 @@ test("выпуск, общий кеш, ошибки ресурсов и отка
     await assert.rejects(activate(state, "B"), /изменились/);
   } finally {
     await lab?.close();
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("сброс очищает состояние и разрешает повторную публикацию", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "frontend-production-reset-"));
+  const state = join(temporary, "state");
+  const dist = join(temporary, "dist");
+  try {
+    await mkdir(join(dist, "assets"), { recursive: true });
+    await writeFile(join(dist, "index.html"), "<!doctype html>");
+    await writeFile(join(dist, "assets", "app.js"), "console.log(1);");
+    await writeFile(join(dist, "release.json"), JSON.stringify({ release: "A" }));
+    await publish(state, dist, "A");
+    await assert.rejects(publish(state, dist, "A"), /уже существует/);
+    const published = join(temporary, "published");
+    await mkdir(published);
+    await reset(state, [published]);
+    await assert.rejects(stat(state), { code: "ENOENT" });
+    await assert.rejects(stat(published), { code: "ENOENT" });
+    await publish(state, dist, "A");
+  } finally {
     await rm(temporary, { recursive: true, force: true });
   }
 });

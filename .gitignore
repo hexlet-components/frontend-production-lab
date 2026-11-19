@@ -4,3 +4,4 @@ dist/
 .lab/
 .env.local
 .env.sentry-build-plugin
+published/

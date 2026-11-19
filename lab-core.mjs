@@ -123,6 +123,10 @@ export const configure = async (state, key, value) => {
   await saveJson(path, { ...config, [key]: value });
 };
 
+export const reset = async (state, outputs = []) => {
+  for (const path of [state, ...outputs]) await rm(path, { recursive: true, force: true });
+};
+
 export const removeAsset = async (state, name) => {
   if (!/^assets\/[a-zA-Z0-9_.-]+$/.test(name ?? ""))
     throw new Error("Передайте путь assets/<имя файла>");

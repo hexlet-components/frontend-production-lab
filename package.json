@@ -14,6 +14,7 @@
     "invalidate": "node lab.mjs invalidate",
     "remove-asset": "node lab.mjs remove-asset",
     "manifest": "node lab.mjs manifest",
+    "reset": "node lab.mjs reset",
     "test": "node --test lab.test.mjs"
   },
   "dependencies": { "react": "19.3.1", "react-dom": "19.3.1" },

@@ -1,6 +1,14 @@
 import { mkdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { activate, configure, createLab, manifest, publish, removeAsset } from "./lab-core.mjs";
+import {
+  activate,
+  configure,
+  createLab,
+  manifest,
+  publish,
+  removeAsset,
+  reset,
+} from "./lab-core.mjs";
 
 const state = resolve(".lab");
 const [command = "serve", ...args] = process.argv.slice(2);
@@ -33,6 +41,9 @@ try {
   } else if (command === "remove-asset") {
     await removeAsset(state, args[0]);
     console.log(`Удалён ${args[0]}`);
+  } else if (command === "reset") {
+    await reset(state, [resolve("dist"), resolve("published")]);
+    console.log("Стенд очищен: выпуски, конфиги, настройки, dist/ и published/");
   } else if (command === "manifest") {
     console.log(JSON.stringify(await manifest(resolve(args[0] ?? "dist")), null, 2));
   } else throw new Error(`Неизвестная команда ${command}`);
