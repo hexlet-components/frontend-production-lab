@@ -47,36 +47,42 @@ const Movement = ({ apiBase, product, onChange }) => {
   );
 };
 
-const Scanner = ({ products, onFound }) => {
+const BarcodeCheck = ({ product }) => {
   const [code, setCode] = useState("");
-  const [message, setMessage] = useState("");
+  const [result, setResult] = useState(null);
 
-  const scan = (event) => {
+  const check = (event) => {
     event.preventDefault();
-    setMessage("");
+    setResult(null);
     try {
       const scanned = code.replaceAll(" ", "");
-      const product = products.find((item) => item.barcode.replaceAll(" ", "") === scanned);
-      if (product) onFound(product);
-      else setMessage("Товар с таким штрихкодом не найден");
+      const expected = product.barcode.replaceAll(" ", "");
+      setResult(
+        scanned === expected
+          ? { text: "Штрихкод совпадает" }
+          : { text: "Это другой товар", failed: true },
+      );
     } catch (error) {
-      setMessage("Не удалось обработать штрихкод. Ошибка передана разработчикам.");
+      setResult({
+        text: "Не удалось проверить штрихкод. Ошибка передана разработчикам.",
+        failed: true,
+      });
       reportError(error);
     }
   };
 
   return (
-    <form className="scanner" onSubmit={scan}>
+    <form className="scanner" onSubmit={check}>
       <label>
-        Штрихкод{" "}
+        Штрихкод с упаковки{" "}
         <input
           value={code}
           placeholder="4 600000 000071"
           onChange={(event) => setCode(event.target.value)}
         />
       </label>
-      <button type="submit">Сканировать штрихкод</button>
-      {message && <output>{message}</output>}
+      <button type="submit">Проверить штрихкод</button>
+      {result && <output className={result.failed ? "error" : undefined}>{result.text}</output>}
     </form>
   );
 };
@@ -158,37 +164,32 @@ const App = ({ config }) => {
                 )
               }
             />
+            <BarcodeCheck key={selected.id} product={selected} />
           </div>
         </article>
       ) : path === "/" ? (
-        <>
-          <Scanner
-            products={products}
-            onFound={(product) => open(`${prefix}/products/${product.id}`)}
-          />
-          <table>
-            <thead>
-              <tr>
-                <th>Товар</th>
-                <th>Цена</th>
-                <th>На складе</th>
+        <table>
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Цена</th>
+              <th>На складе</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.id}>
+                <td>
+                  <a href={`${prefix}/products/${product.id}`} onClick={navigate}>
+                    {product.name}
+                  </a>
+                </td>
+                <td>{product.price} ₽</td>
+                <td>{product.stock} шт.</td>
               </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <a href={`${prefix}/products/${product.id}`} onClick={navigate}>
-                      {product.name}
-                    </a>
-                  </td>
-                  <td>{product.price} ₽</td>
-                  <td>{product.stock} шт.</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <h2>Товар не найден</h2>
       )}
