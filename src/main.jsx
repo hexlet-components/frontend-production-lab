@@ -1,9 +1,51 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import book from "./book.svg";
+import box from "./box.svg";
 import "./style.css";
 
 const Reports = lazy(() => import("./reports.jsx"));
+
+const Movement = ({ apiBase, product, onChange }) => {
+  const [quantity, setQuantity] = useState(1);
+  const [message, setMessage] = useState("");
+
+  const move = async (type) => {
+    setMessage("");
+    const response = await fetch(`${apiBase}/movements`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id, type, quantity: Number(quantity) }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setMessage(result.error ?? `API ответил ${response.status}`);
+      return;
+    }
+    onChange({ ...product, stock: result.stock });
+    setMessage(type === "in" ? `Принято ${result.quantity} шт.` : `Выдано ${result.quantity} шт.`);
+  };
+
+  return (
+    <div className="movement">
+      <label>
+        Количество{" "}
+        <input
+          type="number"
+          min="1"
+          value={quantity}
+          onChange={(event) => setQuantity(event.target.value)}
+        />
+      </label>
+      <button type="button" onClick={() => move("in")}>
+        Принять
+      </button>
+      <button type="button" onClick={() => move("out")}>
+        Выдать
+      </button>
+      {message && <output>{message}</output>}
+    </div>
+  );
+};
 
 const App = ({ config }) => {
   const [pathname, setPathname] = useState(window.location.pathname);
@@ -37,7 +79,7 @@ const App = ({ config }) => {
   return (
     <main>
       <header>
-        <h1>Каталог товаров</h1>
+        <h1>Остатки</h1>
         <span className="meta">
           Версия {__APP_VERSION__} · {config.environment}
         </span>
@@ -60,21 +102,50 @@ const App = ({ config }) => {
       )}
       {path === "/reports" ? (
         <Suspense fallback={<p>Загружаем отчёт…</p>}>
-          <Reports />
+          <Reports apiBase={config.apiBase} />
         </Suspense>
-      ) : path === "/" || selected ? (
-        <section>
-          {(selected ? [selected] : products).map((product) => (
-            <article className="card" key={product.id}>
-              <img src={book} alt="Учебная книга" />
-              <div>
-                <h2>{product.name}</h2>
-                <p>{product.price} ₽</p>
-                <p>Готовое приложение для изучения выпуска и сопровождения.</p>
-              </div>
-            </article>
-          ))}
-        </section>
+      ) : selected ? (
+        <article className="card">
+          <img src={box} alt={selected.name} />
+          <div>
+            <h2>{selected.name}</h2>
+            <p>
+              Цена {selected.price} ₽ · на складе {selected.stock} шт.
+            </p>
+            <Movement
+              apiBase={config.apiBase}
+              product={selected}
+              onChange={(changed) =>
+                setProducts((items) =>
+                  items.map((item) => (item.id === changed.id ? changed : item)),
+                )
+              }
+            />
+          </div>
+        </article>
+      ) : path === "/" ? (
+        <table>
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Цена</th>
+              <th>На складе</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.id}>
+                <td>
+                  <a href={`${prefix}/products/${product.id}`} onClick={navigate}>
+                    {product.name}
+                  </a>
+                </td>
+                <td>{product.price} ₽</td>
+                <td>{product.stock} шт.</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <h2>Товар не найден</h2>
       )}

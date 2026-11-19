@@ -78,6 +78,35 @@ test("выпуск, общий кеш, ошибки ресурсов и отка
       null,
     );
     assert.equal((await fetch(`${lab.originUrl}/api/products`)).status, 200);
+    const move = (url, body) =>
+      fetch(`${url}/api/movements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const received = await move(lab.originUrl, { productId: 42, type: "in", quantity: 6 });
+    assert.equal(received.status, 201);
+    assert.equal((await received.json()).stock, 30);
+    const issued = await move(lab.cdnUrl, { productId: 42, type: "out", quantity: 10 });
+    assert.equal(issued.status, 201);
+    assert.equal((await issued.json()).stock, 20);
+    assert.equal(
+      (await move(lab.originUrl, { productId: 42, type: "out", quantity: 99 })).status,
+      409,
+    );
+    assert.equal(
+      (await move(lab.originUrl, { productId: 42, type: "in", quantity: 0 })).status,
+      400,
+    );
+    const movements = await (await fetch(`${lab.originUrl}/api/movements`)).json();
+    assert.deepEqual(
+      movements.map(({ type, quantity }) => [type, quantity]),
+      [
+        ["in", 6],
+        ["out", 10],
+      ],
+    );
+    assert.equal((await (await fetch(`${lab.originUrl}/api/products/42`)).json()).stock, 20);
 
     const fileUrl = `${lab.cdnUrl}/${reportsA}`;
     const head = await fetch(fileUrl, { method: "HEAD" });

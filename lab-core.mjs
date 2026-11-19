@@ -4,7 +4,12 @@ import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 
 import { dirname, extname, join, resolve, sep } from "node:path";
 
 export const defaults = { fallback: true, cors: true, cacheHtml: false };
-const products = [{ id: 42, name: "Учебная книга", price: 1200 }];
+const initialProducts = [
+  { id: 42, name: "Молоко 3,2 %, 1 л", price: 89, stock: 24 },
+  { id: 7, name: "Хлеб пшеничный", price: 56, stock: 15 },
+  { id: 13, name: "Яйца, 10 шт.", price: 119, stock: 30 },
+  { id: 21, name: "Гречка, 900 г", price: 104, stock: 12 },
+];
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -31,6 +36,20 @@ const readJson = async (path, fallback) => {
     throw error;
   }
 };
+const readBody = (request) =>
+  new Promise((resolvePromise, reject) => {
+    const chunks = [];
+    request.on("data", (chunk) => chunks.push(chunk));
+    request.on("end", () => resolvePromise(Buffer.concat(chunks)));
+    request.on("error", reject);
+  });
+const forwardBody = async (request) =>
+  ["GET", "HEAD"].includes(request.method)
+    ? {}
+    : {
+        body: await readBody(request),
+        headers: { "Content-Type": request.headers["content-type"] ?? "application/json" },
+      };
 const saveJson = async (path, data) => {
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.tmp`;
@@ -167,6 +186,8 @@ export const createLab = async ({
 }) => {
   const servers = [];
   const cache = new Map();
+  const products = initialProducts.map((product) => ({ ...product }));
+  const movements = [];
   const close = async () =>
     Promise.all(
       servers.map(
@@ -206,7 +227,7 @@ export const createLab = async ({
       const allowed = [originUrl, cdnUrl, "http://127.0.0.1:5173", "http://127.0.0.1:4173"];
       if (config.cors && allowed.includes(request.headers.origin)) {
         response.setHeader("Access-Control-Allow-Origin", request.headers.origin);
-        response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         response.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Demo");
         response.setHeader("Vary", "Origin");
       }
@@ -216,8 +237,46 @@ export const createLab = async ({
         return;
       }
       const pathname = new URL(request.url, "http://lab").pathname;
-      if (pathname === "/api/products") json(request, response, products);
-      else if (pathname === "/api/products/42") json(request, response, products[0]);
+      const productId = pathname.match(/^\/api\/products\/(\d+)$/)?.[1];
+      if (request.method === "POST" && pathname === "/api/movements") {
+        let input;
+        try {
+          input = JSON.parse((await readBody(request)).toString("utf8"));
+        } catch {
+          json(request, response, { error: "Ожидается JSON" }, 400);
+          return;
+        }
+        const product = products.find((item) => item.id === input?.productId);
+        const quantity = input?.quantity;
+        if (!product || !["in", "out"].includes(input?.type)) {
+          json(request, response, { error: "Нужны productId и type: in или out" }, 400);
+          return;
+        }
+        if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+          json(request, response, { error: "Количество должно быть целым и больше нуля" }, 400);
+          return;
+        }
+        if (input.type === "out" && quantity > product.stock) {
+          json(request, response, { error: `На складе только ${product.stock}` }, 409);
+          return;
+        }
+        product.stock += input.type === "in" ? quantity : -quantity;
+        const movement = {
+          id: movements.length + 1,
+          productId: product.id,
+          type: input.type,
+          quantity,
+          stock: product.stock,
+          at: new Date().toISOString(),
+        };
+        movements.push(movement);
+        json(request, response, movement, 201);
+      } else if (pathname === "/api/products") json(request, response, products);
+      else if (productId) {
+        const product = products.find((item) => item.id === Number(productId));
+        if (product) json(request, response, product);
+        else json(request, response, { error: "Not found" }, 404);
+      } else if (pathname === "/api/movements") json(request, response, movements);
       else json(request, response, { error: "Not found" }, 404);
     }),
   );
@@ -228,7 +287,12 @@ export const createLab = async ({
       const path = decodeURIComponent(new URL(request.url, "http://lab").pathname);
       log(`ORIGIN ${request.method} ${path}`);
       if (path.startsWith("/api/")) {
-        const result = await fetch(`${apiUrl}${path}`, { headers: { Accept: "application/json" } });
+        const forwarded = await forwardBody(request);
+        const result = await fetch(`${apiUrl}${path}`, {
+          method: request.method,
+          headers: { Accept: "application/json", ...forwarded.headers },
+          body: forwarded.body,
+        });
         send(request, response, result.status, Buffer.from(await result.arrayBuffer()), {
           "Content-Type": result.headers.get("content-type"),
           "Cache-Control": "no-store",
@@ -307,6 +371,7 @@ export const createLab = async ({
         });
         return;
       }
+      const forwarded = await forwardBody(request);
       const upstream = await fetch(`${originUrl}${request.url}`, {
         method: request.method,
         headers: {
@@ -314,7 +379,9 @@ export const createLab = async ({
           ...(request.headers["if-none-match"]
             ? { "If-None-Match": request.headers["if-none-match"] }
             : {}),
+          ...forwarded.headers,
         },
+        body: forwarded.body,
       });
       const body = Buffer.from(await upstream.arrayBuffer());
       const headers = Object.fromEntries(
