@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
-import initialProducts from "./data/products.json" with { type: "json" };
+import initialProducts from "../data/products.json" with { type: "json" };
 
 export const defaults = { fallback: true, cors: true, cacheHtml: false };
 const contentTypes = {
@@ -174,7 +174,7 @@ const listen = (server, port) =>
     });
   });
 
-export const createLab = async ({
+export const startServers = async ({
   state,
   ports = { origin: 8080, api: 8081, cdn: 8082 },
   log = console.log,
@@ -231,7 +231,7 @@ export const createLab = async ({
         response.end();
         return;
       }
-      const pathname = new URL(request.url, "http://lab").pathname;
+      const pathname = new URL(request.url, "http://app").pathname;
       const productId = pathname.match(/^\/api\/products\/(\d+)$/)?.[1];
       if (request.method === "POST" && pathname === "/api/movements") {
         let input;
@@ -279,7 +279,7 @@ export const createLab = async ({
 
   const origin = createServer(
     handle(async (request, response) => {
-      const path = decodeURIComponent(new URL(request.url, "http://lab").pathname);
+      const path = decodeURIComponent(new URL(request.url, "http://app").pathname);
       log(`ORIGIN ${request.method} ${path}`);
       if (path.startsWith("/api/")) {
         const forwarded = await forwardBody(request);
@@ -295,7 +295,7 @@ export const createLab = async ({
         return;
       }
       const current = await readJson(join(state, "current.json"));
-      if (path === "/__lab/health") {
+      if (path === "/__health") {
         json(request, response, { release: current?.release ?? null, settings: await settings() });
         return;
       }
@@ -351,7 +351,7 @@ export const createLab = async ({
 
   const cdn = createServer(
     handle(async (request, response) => {
-      if (request.method === "PURGE" && request.url === "/__lab/cache") {
+      if (request.method === "PURGE" && request.url === "/__cache") {
         cache.clear();
         json(request, response, { cleared: true });
         return;
@@ -361,7 +361,7 @@ export const createLab = async ({
       if (request.method === "GET" && cached && cached.expires > Date.now()) {
         send(request, response, cached.status, cached.body, {
           ...cached.headers,
-          "X-Lab-Cache": "HIT",
+          "X-Cache": "HIT",
           Age: String(Math.floor((Date.now() - cached.saved) / 1000)),
         });
         return;
@@ -391,7 +391,7 @@ export const createLab = async ({
           ...(upstream.headers.has("content-length")
             ? { "Content-Length": upstream.headers.get("content-length") }
             : {}),
-          "X-Lab-Cache": "BYPASS",
+          "X-Cache": "BYPASS",
         });
         response.end();
         return;
@@ -411,13 +411,13 @@ export const createLab = async ({
           expires: Date.now() + Number(match[1]) * 1000,
         });
       if (upstream.status === 304) {
-        response.writeHead(304, { ...headers, "X-Lab-Cache": "BYPASS" });
+        response.writeHead(304, { ...headers, "X-Cache": "BYPASS" });
         response.end();
         return;
       }
       send(request, response, upstream.status, body, {
         ...headers,
-        "X-Lab-Cache": canStore ? "MISS" : "BYPASS",
+        "X-Cache": canStore ? "MISS" : "BYPASS",
       });
     }),
   );

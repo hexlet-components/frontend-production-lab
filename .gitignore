@@ -1,7 +1,7 @@
 .lycheecache
 node_modules/
 dist/
-.lab/
+.state/
 .env.local
 .env.sentry-build-plugin
 published/

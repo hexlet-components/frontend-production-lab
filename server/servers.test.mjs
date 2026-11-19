@@ -7,17 +7,17 @@ import { test } from "node:test";
 import {
   activate,
   configure,
-  createLab,
+  startServers,
   manifest,
   publish,
   removeAsset,
   reset,
-} from "./lab-core.mjs";
+} from "./servers.mjs";
 
 test("выпуск, общий кеш, ошибки ресурсов и откат", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "frontend-production-"));
   const state = join(temporary, "state");
-  let lab;
+  let servers;
   try {
     for (const release of ["A", "B"]) {
       const dist = join(temporary, release);
@@ -41,64 +41,69 @@ test("выпуск, общий кеш, ошибки ресурсов и отка
     const a = JSON.parse(await readFile(join(state, "manifests", "A.json"), "utf8"));
     const reportsA = Object.keys(a.files).find((file) => /assets\/reports-.*\.js$/.test(file));
     assert.ok(reportsA);
-    lab = await createLab({ state, ports: { origin: 0, api: 0, cdn: 0 }, log: () => {} });
+    servers = await startServers({ state, ports: { origin: 0, api: 0, cdn: 0 }, log: () => {} });
 
-    const page = await fetch(`${lab.originUrl}/products/42`, { headers: { Accept: "text/html" } });
+    const page = await fetch(`${servers.originUrl}/products/42`, {
+      headers: { Accept: "text/html" },
+    });
     assert.equal(page.status, 200);
     assert.match(page.headers.get("content-type"), /text\/html/);
     const etag = page.headers.get("etag");
     assert.equal(
       (
-        await fetch(`${lab.originUrl}/products/42`, {
+        await fetch(`${servers.originUrl}/products/42`, {
           headers: { Accept: "text/html", "If-None-Match": etag },
         })
       ).status,
       304,
     );
     assert.equal(
-      (await fetch(`${lab.originUrl}/assets/missing.js`, { headers: { Accept: "text/html" } }))
+      (await fetch(`${servers.originUrl}/assets/missing.js`, { headers: { Accept: "text/html" } }))
         .status,
       404,
     );
     await configure(state, "fallback", "false");
     assert.equal(
-      (await fetch(`${lab.originUrl}/products/42`, { headers: { Accept: "text/html" } })).status,
+      (await fetch(`${servers.originUrl}/products/42`, { headers: { Accept: "text/html" } }))
+        .status,
       404,
     );
     await configure(state, "fallback", "true");
 
-    const cors = await fetch(`${lab.apiUrl}/api/products`, { headers: { Origin: lab.originUrl } });
-    assert.equal(cors.headers.get("access-control-allow-origin"), lab.originUrl);
+    const cors = await fetch(`${servers.apiUrl}/api/products`, {
+      headers: { Origin: servers.originUrl },
+    });
+    assert.equal(cors.headers.get("access-control-allow-origin"), servers.originUrl);
     assert.equal((await cors.json())[0].id, 42);
     await configure(state, "cors", "false");
     assert.equal(
       (
-        await fetch(`${lab.apiUrl}/api/products`, { headers: { Origin: lab.originUrl } })
+        await fetch(`${servers.apiUrl}/api/products`, { headers: { Origin: servers.originUrl } })
       ).headers.get("access-control-allow-origin"),
       null,
     );
-    assert.equal((await fetch(`${lab.originUrl}/api/products`)).status, 200);
+    assert.equal((await fetch(`${servers.originUrl}/api/products`)).status, 200);
     const move = (url, body) =>
       fetch(`${url}/api/movements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-    const received = await move(lab.originUrl, { productId: 42, type: "in", quantity: 6 });
+    const received = await move(servers.originUrl, { productId: 42, type: "in", quantity: 6 });
     assert.equal(received.status, 201);
     assert.equal((await received.json()).stock, 30);
-    const issued = await move(lab.cdnUrl, { productId: 42, type: "out", quantity: 10 });
+    const issued = await move(servers.cdnUrl, { productId: 42, type: "out", quantity: 10 });
     assert.equal(issued.status, 201);
     assert.equal((await issued.json()).stock, 20);
     assert.equal(
-      (await move(lab.originUrl, { productId: 42, type: "out", quantity: 99 })).status,
+      (await move(servers.originUrl, { productId: 42, type: "out", quantity: 99 })).status,
       409,
     );
     assert.equal(
-      (await move(lab.originUrl, { productId: 42, type: "in", quantity: 0 })).status,
+      (await move(servers.originUrl, { productId: 42, type: "in", quantity: 0 })).status,
       400,
     );
-    const movements = await (await fetch(`${lab.originUrl}/api/movements`)).json();
+    const movements = await (await fetch(`${servers.originUrl}/api/movements`)).json();
     assert.deepEqual(
       movements.map(({ type, quantity }) => [type, quantity]),
       [
@@ -106,48 +111,48 @@ test("выпуск, общий кеш, ошибки ресурсов и отка
         ["out", 10],
       ],
     );
-    assert.equal((await (await fetch(`${lab.originUrl}/api/products/42`)).json()).stock, 20);
+    assert.equal((await (await fetch(`${servers.originUrl}/api/products/42`)).json()).stock, 20);
 
-    const fileUrl = `${lab.cdnUrl}/${reportsA}`;
+    const fileUrl = `${servers.cdnUrl}/${reportsA}`;
     const head = await fetch(fileUrl, { method: "HEAD" });
     assert.equal(
       Number(head.headers.get("content-length")),
       (await readFile(join(state, "releases", "A", reportsA))).length,
     );
-    assert.equal((await fetch(fileUrl)).headers.get("x-lab-cache"), "MISS");
-    assert.equal((await fetch(fileUrl)).headers.get("x-lab-cache"), "HIT");
-    await fetch(`${lab.cdnUrl}/__lab/cache`, { method: "PURGE" });
-    assert.equal((await fetch(fileUrl)).headers.get("x-lab-cache"), "MISS");
+    assert.equal((await fetch(fileUrl)).headers.get("x-cache"), "MISS");
+    assert.equal((await fetch(fileUrl)).headers.get("x-cache"), "HIT");
+    await fetch(`${servers.cdnUrl}/__cache`, { method: "PURGE" });
+    assert.equal((await fetch(fileUrl)).headers.get("x-cache"), "MISS");
 
     await configure(state, "cacheHtml", "true");
-    const cachedA = await fetch(lab.cdnUrl);
-    assert.equal(cachedA.headers.get("x-lab-cache"), "MISS");
+    const cachedA = await fetch(servers.cdnUrl);
+    assert.equal(cachedA.headers.get("x-cache"), "MISS");
     const htmlA = await cachedA.text();
     await activate(state, "B");
-    assert.equal(await (await fetch(lab.cdnUrl)).text(), htmlA);
-    const originB = await (await fetch(lab.originUrl)).text();
+    assert.equal(await (await fetch(servers.cdnUrl)).text(), htmlA);
+    const originB = await (await fetch(servers.originUrl)).text();
     assert.notEqual(originB, htmlA);
-    await fetch(`${lab.cdnUrl}/__lab/cache`, { method: "PURGE" });
-    assert.equal(await (await fetch(lab.cdnUrl)).text(), originB);
-    assert.equal((await fetch(`${lab.originUrl}/${reportsA}`)).status, 200);
+    await fetch(`${servers.cdnUrl}/__cache`, { method: "PURGE" });
+    assert.equal(await (await fetch(servers.cdnUrl)).text(), originB);
+    assert.equal((await fetch(`${servers.originUrl}/${reportsA}`)).status, 200);
 
     await removeAsset(state, reportsA);
-    assert.equal((await fetch(`${lab.originUrl}/${reportsA}`)).status, 404);
+    assert.equal((await fetch(`${servers.originUrl}/${reportsA}`)).status, 404);
     await copyFile(join(state, "releases", "A", reportsA), join(state, "shared", reportsA));
     await activate(state, "A");
     await configure(state, "environment", "staging");
-    assert.deepEqual(await (await fetch(`${lab.originUrl}/app-config.json`)).json(), {
+    assert.deepEqual(await (await fetch(`${servers.originUrl}/app-config.json`)).json(), {
       environment: "staging",
       apiBase: "/api",
     });
     assert.deepEqual(await manifest(join(state, "releases", "A")), a.files);
-    assert.equal(await (await fetch(lab.originUrl)).text(), htmlA);
+    assert.equal(await (await fetch(servers.originUrl)).text(), htmlA);
 
     const altered = join(state, "releases", "B", "index.html");
     await writeFile(altered, "изменённый артефакт");
     await assert.rejects(activate(state, "B"), /изменились/);
   } finally {
-    await lab?.close();
+    await servers?.close();
     await rm(temporary, { recursive: true, force: true });
   }
 });

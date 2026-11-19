@@ -14,3 +14,6 @@ th, td { padding: 8px 10px; border-bottom: 1px solid #d8e3e8; text-align: left; 
 .movement { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .movement input { width: 72px; padding: 8px; }
 .movement output { flex-basis: 100%; }
+.scanner { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 24px; }
+.scanner input { width: 180px; padding: 8px; }
+.scanner output { flex-basis: 100%; color: #a11; }

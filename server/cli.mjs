@@ -3,23 +3,23 @@ import { resolve } from "node:path";
 import {
   activate,
   configure,
-  createLab,
+  startServers,
   manifest,
   publish,
   removeAsset,
   reset,
-} from "./lab-core.mjs";
+} from "./servers.mjs";
 
-const state = resolve(".lab");
+const state = resolve(".state");
 const [command = "serve", ...args] = process.argv.slice(2);
 await mkdir(state, { recursive: true });
 
 try {
   if (command === "serve") {
-    const lab = await createLab({ state });
-    console.log(`Origin ${lab.originUrl}\nAPI ${lab.apiUrl}\nОбщий кеш ${lab.cdnUrl}`);
+    const servers = await startServers({ state });
+    console.log(`Origin ${servers.originUrl}\nAPI ${servers.apiUrl}\nОбщий кеш ${servers.cdnUrl}`);
     const stop = async () => {
-      await lab.close();
+      await servers.close();
       process.exit(0);
     };
     process.on("SIGINT", stop);
@@ -35,7 +35,7 @@ try {
     await configure(state, args[0], args[1]);
     console.log(`${args[0]}=${args[1]}`);
   } else if (command === "invalidate") {
-    const response = await fetch("http://127.0.0.1:8082/__lab/cache", { method: "PURGE" });
+    const response = await fetch("http://127.0.0.1:8082/__cache", { method: "PURGE" });
     if (!response.ok) throw new Error(`Кеш ответил ${response.status}`);
     console.log("Общий кеш очищен");
   } else if (command === "remove-asset") {

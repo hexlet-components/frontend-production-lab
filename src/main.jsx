@@ -47,6 +47,40 @@ const Movement = ({ apiBase, product, onChange }) => {
   );
 };
 
+const Scanner = ({ products, onFound }) => {
+  const [code, setCode] = useState("");
+  const [message, setMessage] = useState("");
+
+  const scan = (event) => {
+    event.preventDefault();
+    setMessage("");
+    try {
+      const scanned = code.replaceAll(" ", "");
+      const product = products.find((item) => item.barcode.replaceAll(" ", "") === scanned);
+      if (product) onFound(product);
+      else setMessage("Товар с таким штрихкодом не найден");
+    } catch (error) {
+      setMessage("Не удалось обработать штрихкод. Ошибка передана разработчикам.");
+      reportError(error);
+    }
+  };
+
+  return (
+    <form className="scanner" onSubmit={scan}>
+      <label>
+        Штрихкод{" "}
+        <input
+          value={code}
+          placeholder="4 600000 000071"
+          onChange={(event) => setCode(event.target.value)}
+        />
+      </label>
+      <button type="submit">Сканировать штрихкод</button>
+      {message && <output>{message}</output>}
+    </form>
+  );
+};
+
 const App = ({ config }) => {
   const [pathname, setPathname] = useState(window.location.pathname);
   const [products, setProducts] = useState([]);
@@ -65,11 +99,14 @@ const App = ({ config }) => {
     return () => window.removeEventListener("popstate", changePath);
   }, [config.apiBase]);
 
+  const open = (nextPath) => {
+    window.history.pushState({}, "", nextPath);
+    setPathname(window.location.pathname);
+  };
   const navigate = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
     event.preventDefault();
-    window.history.pushState({}, "", event.currentTarget.pathname);
-    setPathname(window.location.pathname);
+    open(event.currentTarget.pathname);
   };
 
   const prefix = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -124,40 +161,37 @@ const App = ({ config }) => {
           </div>
         </article>
       ) : path === "/" ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Товар</th>
-              <th>Цена</th>
-              <th>На складе</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>
-                  <a href={`${prefix}/products/${product.id}`} onClick={navigate}>
-                    {product.name}
-                  </a>
-                </td>
-                <td>{product.price} ₽</td>
-                <td>{product.stock} шт.</td>
+        <>
+          <Scanner
+            products={products}
+            onFound={(product) => open(`${prefix}/products/${product.id}`)}
+          />
+          <table>
+            <thead>
+              <tr>
+                <th>Товар</th>
+                <th>Цена</th>
+                <th>На складе</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td>
+                    <a href={`${prefix}/products/${product.id}`} onClick={navigate}>
+                      {product.name}
+                    </a>
+                  </td>
+                  <td>{product.price} ₽</td>
+                  <td>{product.stock} шт.</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       ) : (
         <h2>Товар не найден</h2>
       )}
-      <button
-        type="button"
-        id="trigger-error"
-        onClick={() => {
-          throw new Error("catalog-demo-error");
-        }}
-      >
-        Вызвать учебную ошибку
-      </button>
     </main>
   );
 };
