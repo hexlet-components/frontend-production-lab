@@ -31,3 +31,7 @@ run = "hk check --all"
 [tasks.fix]
 description = "Применить автоисправления"
 run = "hk fix --all"
+
+[tasks.demo]
+description = "Собрать демо для GitHub Pages в dist-demo/, API и конфиг работают в браузере"
+run = ["npx vite build --config vite.demo.config.js", "cp dist-demo/index.html dist-demo/404.html"]

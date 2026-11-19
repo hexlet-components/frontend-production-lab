@@ -2,14 +2,9 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
+import initialProducts from "./data/products.json" with { type: "json" };
 
 export const defaults = { fallback: true, cors: true, cacheHtml: false };
-const initialProducts = [
-  { id: 42, name: "Молоко 3,2 %, 1 л", price: 89, stock: 24 },
-  { id: 7, name: "Хлеб пшеничный", price: 56, stock: 15 },
-  { id: 13, name: "Яйца, 10 шт.", price: 119, stock: 30 },
-  { id: 21, name: "Гречка, 900 г", price: 104, stock: 12 },
-];
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",

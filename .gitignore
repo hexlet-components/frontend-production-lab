@@ -5,3 +5,4 @@ dist/
 .env.local
 .env.sentry-build-plugin
 published/
+dist-demo/
